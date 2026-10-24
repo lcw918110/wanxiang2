@@ -51,6 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: 测试失败诊断回归
+        run: python3 tools/test_ci_diagnostics.py
       - name: 超时工具进程组回归
         run: python3 tools/test_timeout.py
       - name: 断言卫生
@@ -117,6 +119,13 @@ jobs:
             exit 1
           fi
           tail -1 test.log
+      - name: 留存库测试失败日志
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-failure-${{ matrix.lib }}
+          path: test.log
+          retention-days: 14
   compose:
     needs: pack
     runs-on: ubuntu-latest
@@ -129,10 +138,21 @@ jobs:
       - name: 组合者测试
         run: |
           if ! ./x compose > compose.log 2>&1; then
-            tail -60 compose.log | sed 's/^/::error::/'
+            cat compose.log
+            grep -E 'failed |FAIL |Expected:|Actual:' compose.log | sed 's/^/::error::/' || true
             exit 1
           fi
           tail -1 compose.log
+      - name: 留存组合者失败日志
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compose-failure-logs
+          path: |
+            compose.log
+            /tmp/wanxiang2-tests-*/*.log
+            /tmp/wanxiang2-tests-*/*.status
+          retention-days: 14
   # 仓库外消费（根 SPEC 2）：仓库外的临时项目只从 feed 取包，构建并真实运行。
   consume:
     needs: pack
@@ -244,6 +264,15 @@ jobs:
             exit 1
           fi
           grep -c '^PASS' smoke.log | sed 's/^/冒烟通过项: /'
+      - name: 留存发布冒烟失败现场
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: published-smoke-failure
+          path: |
+            smoke.log
+            artifacts/smoke-published/
+          retention-days: 14
   widget-template:
     needs: check
     runs-on: ubuntu-latest

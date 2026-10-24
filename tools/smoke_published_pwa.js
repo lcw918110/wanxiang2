@@ -785,13 +785,16 @@ const checkSkip = (name, reason, detail) => { skipped++; console.log(`SKIP ${nam
                 writeFileSync(p, Buffer.from(b64, 'base64'));
                 // 画布位图是 CSS × DPR，导出时已缩放到 CSS × OCR_SCALE，
                 // 所以 OCR 像素 ÷ OCR_SCALE 就是 CSS 坐标（DPR 已在这一步消掉）。
-                return runOcr(p).map((w) => ({
+                const words = runOcr(p).map((w) => ({
                     ...w,
                     left: w.left / OCR_SCALE,
                     top: w.top / OCR_SCALE,
                     width: w.width / OCR_SCALE,
                     height: w.height / OCR_SCALE,
                 }));
+                // 保存原始识别事实，失败时能区分误点、未加载与切词差异。
+                writeFileSync(`${OUT}/${name}-ocr.json`, JSON.stringify(words, null, 2));
+                return words;
             };
             await shotPath('smoke-before-popups');
             const sidebarWords = await ocrShot('smoke-sidebar');
