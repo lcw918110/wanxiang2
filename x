@@ -464,8 +464,8 @@ run_tests_parallel() {
     if [[ "$(cat "$s")" == FAIL ]]; then
       local name; name="$(basename "$s" .status)"
       failed=$((failed+1))
-      echo "-- FAIL ${name}（日志 $logdir/$name.log 末尾）"
-      tail -25 "$logdir/$name.log"
+      echo "-- FAIL ${name}（完整日志 $logdir/$name.log）"
+      cat "$logdir/$name.log"
     fi
   done
   # 没留下状态文件的（子进程被 OOM/ENOSPC 之类的系统因素干掉）也按失败算：
